@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sine Wave Graph</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans p-4 md:p-8 flex justify-center min-h-screen">
+    <div id="root" class="w-full max-w-4xl"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const SineWaveChart = ({ data }) => {
+            const width = 800;
+            const height = 300;
+            const padding = { top: 20, right: 30, bottom: 40, left: 40 };
+            
+            const innerWidth = width - padding.left - padding.right;
+            const innerHeight = height - padding.top - padding.bottom;
+            
+            // ฟังก์ชันสำหรับแปลงค่า X (0 ถึง 10) และ Y (-5 ถึง 5) ให้เป็นพิกัดบนหน้าจอ
+            const getX = (x) => padding.left + (x / 10) * innerWidth;
+            const getY = (y) => padding.top + innerHeight - ((y + 5) / 10) * innerHeight;
+
+            let pathD = "";
+            if (data.length > 0) {
+                pathD = `M ${getX(data[0].x)} ${getY(data[0].y)} ` + 
+                        data.slice(1).map(d => `L ${getX(d.x)} ${getY(d.y)}`).join(" ");
+            }
+
+            const xTicks = [0, 2, 4, 6, 8, 10];
+            const yTicks = [-5, -2.5, 0, 2.5, 5];
+
+            return (
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                    {/* เส้น Grid */}
+                    {xTicks.map(tick => (
+                        <line key={`gx-${tick}`} x1={getX(tick)} y1={padding.top} x2={getX(tick)} y2={height - padding.bottom} stroke="#e5e7eb" strokeDasharray="3 3" />
+                    ))}
+                    {yTicks.map(tick => (
+                        <line key={`gy-${tick}`} x1={padding.left} y1={getY(tick)} x2={width - padding.right} y2={getY(tick)} stroke="#e5e7eb" strokeDasharray="3 3" />
+                    ))}
+                    
+                    {/* แกน X และ Y */}
+                    <line x1={padding.left} y1={getY(0)} x2={width - padding.right} y2={getY(0)} stroke="#9ca3af" strokeWidth="1.5" />
+                    <line x1={padding.left} y1={padding.top} x2={padding.left} y2={height - padding.bottom} stroke="#9ca3af" strokeWidth="1.5" />
+
+                    {/* ตัวเลขบนแกน X */}
+                    {xTicks.map(tick => (
+                        <text key={`tx-${tick}`} x={getX(tick)} y={height - 10} textAnchor="middle" fill="#6b7280" fontSize="14">{tick}</text>
+                    ))}
+                    <text x={width / 2} y={height + 5} textAnchor="middle" fill="#374151" fontSize="14" fontWeight="bold">Position (x)</text>
+
+                    {/* ตัวเลขบนแกน Y */}
+                    {yTicks.map(tick => (
+                        <text key={`ty-${tick}`} x={padding.left - 10} y={getY(tick) + 5} textAnchor="end" fill="#6b7280" fontSize="14">{tick}</text>
+                    ))}
+                    
+                    {/* เส้นกราฟคลื่น */}
+                    <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+                </svg>
+            );
+        };
+
+        function App() {
+            // Initial state values matching typical wave parameters
+            const [amplitude, setAmplitude] = useState(1);
+            const [waveNumber, setWaveNumber] = useState(1); // k
+            const [angularFreq, setAngularFreq] = useState(1); // omega
+            const [phase, setPhase] = useState(0); // phi_0
+            const [time, setTime] = useState(0); // t
+            const [isPlaying, setIsPlaying] = useState(false);
+
+            useEffect(() => {
+                let animationId;
+                if (isPlaying) {
+                    const updateTime = () => {
+                        setTime(prevTime => prevTime + 0.05);
+                        animationId = requestAnimationFrame(updateTime);
+                    };
+                    animationId = requestAnimationFrame(updateTime);
+                }
+                return () => cancelAnimationFrame(animationId);
+            }, [isPlaying]);
+
+            const data = useMemo(() => {
+                const points = [];
+                // Generate points from x = 0 to 10
+                for (let x = 0; x <= 10; x += 0.1) {
+                    // y(x,t) = A*sin(kx - wt + phi)
+                    const y = amplitude * Math.sin(waveNumber * x - angularFreq * time + phase);
+                    points.push({
+                        x: parseFloat(x.toFixed(1)),
+                        y: parseFloat(y.toFixed(3))
+                    });
+                }
+                return points;
+            }, [amplitude, waveNumber, angularFreq, phase, time]);
+
+            const formatValue = (val) => Number(val).toFixed(2);
+
+            return (
+                <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-6">
+                    <div class="border-b pb-4">
+                        <h1 class="text-2xl font-bold text-gray-900 mb-2">กราฟคลื่นรูปไซน์</h1>
+                        <p class="text-gray-600 font-mono text-lg bg-gray-100 p-2 rounded inline-block">
+                            y(x,t) = A sin(kx - ωt + φ₀)
+                        </p>
+                    </div>
+
+                    {/* Chart Container */}
+                    {}
+                    <div class="h-80 w-full bg-gray-50 rounded-lg border p-4 flex justify-center items-center overflow-hidden">
+                        <SineWaveChart data={data} />
+                    </div>
+
+                    {/* Controls Grid */}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* Amplitude Control */}
+                        <div class="flex flex-col gap-2">
+                            <label class="flex justify-between text-sm font-medium text-gray-700">
+                                <span>Amplitude (A)</span>
+                                <span class="text-blue-600 font-mono">{formatValue(amplitude)}</span>
+                            </label>
+                            <input 
+                                type="range" min="0" max="5" step="0.1" 
+                                value={amplitude} 
+                                onChange={(e) => setAmplitude(parseFloat(e.target.value))}
+                                class="w-full accent-blue-600"
+                            />
+                        </div>
+
+                        {/* Wave Number Control */}
+                        <div class="flex flex-col gap-2">
+                            <label class="flex justify-between text-sm font-medium text-gray-700">
+                                <span>Wave Number (k)</span>
+                                <span class="text-blue-600 font-mono">{formatValue(waveNumber)} rad/m</span>
+                            </label>
+                            <input 
+                                type="range" min="0" max="5" step="0.1" 
+                                value={waveNumber} 
+                                onChange={(e) => setWaveNumber(parseFloat(e.target.value))}
+                                class="w-full accent-blue-600"
+                            />
+                        </div>
+
+                        {/* Angular Frequency Control */}
+                        <div class="flex flex-col gap-2">
+                            <label class="flex justify-between text-sm font-medium text-gray-700">
+                                <span>Angular Frequency (ω)</span>
+                                <span class="text-blue-600 font-mono">{formatValue(angularFreq)} rad/s</span>
+                            </label>
+                            <input 
+                                type="range" min="0" max="5" step="0.1" 
+                                value={angularFreq} 
+                                onChange={(e) => setAngularFreq(parseFloat(e.target.value))}
+                                class="w-full accent-blue-600"
+                            />
+                        </div>
+
+                        {/* Phase Control */}
+                        <div class="flex flex-col gap-2">
+                            <label class="flex justify-between text-sm font-medium text-gray-700">
+                                <span>Initial Phase (φ₀)</span>
+                                <span class="text-blue-600 font-mono">{formatValue(phase)} rad</span>
+                            </label>
+                            <input 
+                                type="range" min="-3.14" max="3.14" step="0.1" 
+                                value={phase} 
+                                onChange={(e) => setPhase(parseFloat(e.target.value))}
+                                class="w-full accent-blue-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Time Controls */}
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col sm:flex-row items-center gap-4">
+                        <button 
+                            onClick={() => setIsPlaying(!isPlaying)}
+                            class={`px-6 py-2 rounded-md font-medium text-white transition-colors ${isPlaying ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}`}
+                        >
+                            {isPlaying ? 'Pause Time' : 'Play Time'}
+                        </button>
+                        
+                        <div class="flex-1 w-full flex flex-col gap-2">
+                            <label class="flex justify-between text-sm font-medium text-gray-700">
+                                <span>Time (t)</span>
+                                <span class="text-gray-900 font-mono">{formatValue(time)} s</span>
+                            </label>
+                            <input 
+                                type="range" min="0" max="20" step="0.1" 
+                                value={time} 
+                                onChange={(e) => {
+                                    setTime(parseFloat(e.target.value));
+                                    setIsPlaying(false); // Stop playing if user manually drags time
+                                }}
+                                class="w-full accent-gray-600"
+                            />
+                        </div>
+                        <button 
+                            onClick={() => { setTime(0); setIsPlaying(false); }}
+                            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md font-medium transition-colors"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
